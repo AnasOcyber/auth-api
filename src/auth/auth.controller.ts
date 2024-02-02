@@ -15,7 +15,7 @@ export class AuthController {
   }
 
   @Get('login')
-  signIn(@Body() createUserDto: SignupDto): Promise<string> {
+  signIn(@Body() createUserDto: SignupDto): Promise<{ accessToken: string }> {
     return this.authService.signIn(createUserDto);
   }
 
@@ -30,7 +30,7 @@ export class AuthController {
   }
 
   @Get('forget-password')
-  forgetPassword(@Body() { email }: SigninDto): Promise<{ message: string }> {
+  forgetPassword(@Body() { email }: SigninDto): Promise<{ otp: string }> {
     return this.authService.forgetPassword(email);
   }
 
