@@ -1,38 +1,57 @@
-import { Injectable } from '@nestjs/common';
+import { Injectable, NotFoundException } from '@nestjs/common';
 import { CreateUserDto } from './dto/create-user.dto';
-import mongoose from 'mongoose';
+import { Model } from 'mongoose';
+import { InjectModel } from '@nestjs/mongoose';
+import { User } from './schemas/user.schema';
+import { UpdatePasswordDto } from './dto/update-password.dto';
 
 @Injectable()
 export class AuthService {
-  constructor() {}
+  constructor(@InjectModel('User') private userModel: Model<User>) {}
 
-  private users = [];
-
-  createUser({ username, password }: CreateUserDto) {
-    const User = mongoose.model('User');
-    const user = new User({ username: username, password: password });
-    this.users.push(user);
-
-    return this.users;
+  async createUser(createUserDto: CreateUserDto): Promise<User> {
+    const newOtp = generateOtp();
+    const user = new this.userModel({ ...createUserDto, otp: newOtp });
+    return await user.save();
   }
 
-  getUser() {
-    return;
+  async signIn({ email, password }: CreateUserDto): Promise<User> {
+    const user = await this.userModel.findOne({
+      email: email,
+      password: password,
+    });
+
+    if (user) return user;
+    throw new NotFoundException();
   }
 
-  sendOtp() {
-    return;
+  async sendOtp(email: string): Promise<{ otp: string }> {
+    const user = await this.userModel.findOne({ email: email });
+
+    if (user) return { otp: user.otp };
+    throw new NotFoundException();
   }
 
-  resendOtp() {
-    return;
+  async resetPassword({
+    email,
+    otp,
+    newPassword,
+  }: UpdatePasswordDto): Promise<User> {
+    const user = await this.userModel.findOne({ email: email, otp: otp });
+    if (user) {
+      user.password = newPassword;
+      return user.save();
+    }
+    throw new NotFoundException();
   }
 
-  resetPassword() {
-    return;
+  async forgetPassword(email: string): Promise<{ message: string }> {
+    const user = await this.userModel.findOne({ email: email });
+    if (!user) throw new NotFoundException();
+    return { message: 'User found' };
   }
+}
 
-  forgetPassword() {
-    return;
-  }
+function generateOtp(): string {
+  return (Math.floor(Math.random() * 10000) + 10000).toString().substring(1);
 }
